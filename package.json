@@ -1,5 +1,5 @@
 {
-  "name": "amr-recorder",
+  "name": "amr-audio-recorder",
   "version": "1.1.2",
   "description": "amr 音频录制与播放（微信语音所用的格式）",
   "main": "BenzAMRRecorder.js",

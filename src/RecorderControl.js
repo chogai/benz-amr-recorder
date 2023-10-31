@@ -100,6 +100,10 @@ export default class RecorderControl {
         this.stopPcm();
     }
 
+    playbackRate(value) {
+        this._curSourceNode['playbackRate'].value = value;
+    }
+
     initRecorder() {
         return new Promise((resolve, reject) => {
             let s = (stream) => {

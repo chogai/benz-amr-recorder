@@ -14,13 +14,13 @@ import amrWorker from "./amrnb";
 const amrWorkerStr = amrWorker.toString()
     .replace(/^\s*function.*?\(\)\s*{/, '')
     .replace(/}\s*$/, '');
-const amrWorkerURLObj = (window.URL || window.webkitURL).createObjectURL(new Blob([amrWorkerStr], {type:"text/javascript"}));
+const amrWorkerURLObj = (window.URL || window.webkitURL).createObjectURL(new Blob([amrWorkerStr], { type: "text/javascript" }));
 
 import amrWbWorker from "./amrwb";
 const amrWbWorkerStr = amrWbWorker.toString()
     .replace(/^\s*function.*?\(\)\s*{/, '')
     .replace(/}\s*$/, '');
-const amrWbWorkerURLObj = (window.URL || window.webkitURL).createObjectURL(new Blob([amrWbWorkerStr], {type:"text/javascript"}));
+const amrWbWorkerURLObj = (window.URL || window.webkitURL).createObjectURL(new Blob([amrWbWorkerStr], { type: "text/javascript" }));
 
 export default class BenzAMRRecorder {
 
@@ -63,7 +63,7 @@ export default class BenzAMRRecorder {
     _pauseTime = 0.0;
 
     _wbAudioType = '';
-    
+
     constructor() {
     }
 
@@ -87,12 +87,12 @@ export default class BenzAMRRecorder {
         }
         this._playEmpty();
         return new Promise((resolve, reject) => {
-            if(audioType && audioType === 'audio/amr-wb') {
+            if (audioType && audioType === 'audio/amr-wb') {
                 let u8Array = new Uint8Array(array);
                 this.decodeAMRWBAsync(u8Array).then((samples) => {
                     this._samples = samples;
                     this._isInit = true;
-    
+
                     if (!this._samples) {
                         RecorderControl.decodeAudioArrayBufferByContext(array).then((data) => {
                             this._isInit = true;
@@ -112,12 +112,12 @@ export default class BenzAMRRecorder {
                         resolve();
                     }
                 });
-            }else {
+            } else {
                 let u8Array = new Uint8Array(array);
                 this.decodeAMRAsync(u8Array).then((samples) => {
                     this._samples = samples;
                     this._isInit = true;
-    
+
                     if (!this._samples) {
                         RecorderControl.decodeAudioArrayBufferByContext(array).then((data) => {
                             this._isInit = true;
@@ -155,7 +155,7 @@ export default class BenzAMRRecorder {
         this._blob = blob;
         const p = new Promise((resolve) => {
             let reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 resolve(e.target.result);
             };
             reader.readAsArrayBuffer(blob);
@@ -180,10 +180,10 @@ export default class BenzAMRRecorder {
             let xhr = new XMLHttpRequest();
             xhr.open('GET', url, true);
             xhr.responseType = 'arraybuffer';
-            xhr.onload = function() {
+            xhr.onload = function () {
                 resolve(this.response);
             };
-            xhr.onerror = function() {
+            xhr.onerror = function () {
                 reject(new Error('Failed to fetch ' + url));
             };
             xhr.send();
@@ -482,6 +482,14 @@ export default class BenzAMRRecorder {
     }
 
     /**
+     * 设置播放速率
+     * @param {number} value 速率
+     */
+    setPlaybackRate(value) {
+        this._recorderControl.playbackRate(value)
+    }
+
+    /**
      * 获取当前播放位置（秒）
      * @return {Number} 位置，秒，浮点数
      */
@@ -600,7 +608,7 @@ export default class BenzAMRRecorder {
             }, resolve);
         });
     }
-    
+
     decodeAMRAsync(u8Array) {
         return new Promise(resolve => {
             this._runAMRWorker({
@@ -641,11 +649,11 @@ export default class BenzAMRRecorder {
     }
 
     static rawAMRWBData2Blob(data) {
-        return new Blob([data.buffer], {type: 'audio/amr-wb'});
+        return new Blob([data.buffer], { type: 'audio/amr-wb' });
     }
 
     static rawAMRData2Blob(data) {
-        return new Blob([data.buffer], {type: 'audio/amr'});
+        return new Blob([data.buffer], { type: 'audio/amr' });
     }
 
     static throwAlreadyInitialized() {
