@@ -34,6 +34,8 @@ export default class BenzAMRRecorder {
 
     _rawData = new Uint8Array(0);
 
+    _playbackRate = null;
+
     _blob = null;
 
     _onEnded = null;
@@ -45,6 +47,8 @@ export default class BenzAMRRecorder {
     _onPause = null;
 
     _onResume = null;
+
+    _onTimeUpdate = null;
 
     _onStop = null;
 
@@ -64,6 +68,10 @@ export default class BenzAMRRecorder {
 
     _wbAudioType = '';
 
+    _timer = null;
+
+    _currentTime = 0;
+
     constructor() {
     }
 
@@ -73,6 +81,26 @@ export default class BenzAMRRecorder {
      */
     isInit() {
         return this._isInit;
+    }
+
+    updateTime() {
+        clearInterval(this.timer);
+        this.timer = setInterval(() => {
+            if (this._currentTime >= this.getDuration()) {
+                this.resetTimer();
+
+            }
+            if (this._onTimeUpdate) {
+                this._onTimeUpdate(this._currentTime)
+            }
+            this._currentTime++
+
+        }, 1000 / (this._playbackRate || 1));
+    }
+
+    resetTimer() {
+        this._currentTime = 0;
+        clearInterval(this.timer);
     }
 
     /**
@@ -253,6 +281,9 @@ export default class BenzAMRRecorder {
                 case 'finishRecord':
                     this._onFinishRecord = fn;
                     break;
+                case 'timeUpdate':
+                    this._onTimeUpdate = fn;
+                    break;
                 default:
             }
         }
@@ -296,6 +327,14 @@ export default class BenzAMRRecorder {
      */
     onEnded(fn) {
         this.on('ended', fn);
+    }
+
+    /**
+     * 音频播放进度更新事件
+     * @param {Function} fn
+     */
+    onTimeUpdate(fn) {
+        this.on('timeUpdate', fn);
     }
 
     /**
@@ -369,6 +408,7 @@ export default class BenzAMRRecorder {
             _startTime,
             this._wbAudioType
         );
+        this.updateTime();
     }
 
     /**
@@ -381,6 +421,7 @@ export default class BenzAMRRecorder {
         if (this._onStop) {
             this._onStop();
         }
+        this.resetTimer();
     }
 
     /**
@@ -394,6 +435,7 @@ export default class BenzAMRRecorder {
         this._isPaused = true;
         this._pauseTime = RecorderControl.getCtxTime() - this._startCtxTime;
         this._recorderControl.stopPcm();
+        clearInterval(this.timer);
         if (this._onPause) {
             this._onPause();
         }
@@ -419,6 +461,7 @@ export default class BenzAMRRecorder {
         if (this._onResume) {
             this._onResume();
         }
+        this.updateTime();
     }
 
     /**
@@ -462,6 +505,7 @@ export default class BenzAMRRecorder {
      */
     setPosition(time) {
         const _time = parseFloat(time);
+        this._currentTime = _time;
         if (_time > this.getDuration()) {
             this.stop();
         } else if (this._isPaused) {
@@ -486,7 +530,11 @@ export default class BenzAMRRecorder {
      * @param {number} value 速率
      */
     setPlaybackRate(value) {
-        this._recorderControl.playbackRate(value)
+        this._playbackRate = value
+        this._recorderControl.playbackRate(value);
+        if (this._isPlaying) {
+            this.updateTime();
+        }
     }
 
     /**

@@ -37,6 +37,7 @@ export default class RecorderControl {
     _recorderStreamSourceNode = null;
     _recorder = null;
     _isRecording = false;
+    _playbackRate = null
 
     _curSourceNode = null;
 
@@ -84,6 +85,7 @@ export default class RecorderControl {
         this._curSourceNode['buffer'] = buffer;
         this._curSourceNode['loop'] = false;
         this._curSourceNode['connect'](ctx['destination']);
+        this._playbackRate = this._playbackRate ? this._playbackRate : this._curSourceNode['playbackRate'].value;
         this._curSourceNode.onended = onEnded;
         this._curSourceNode.start();
     }

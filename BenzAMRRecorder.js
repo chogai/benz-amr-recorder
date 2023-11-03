@@ -334,6 +334,7 @@
       this._recorderStreamSourceNode = null;
       this._recorder = null;
       this._isRecording = false;
+      this._playbackRate = null;
       this._curSourceNode = null;
     }
     _createClass(RecorderControl, [{
@@ -379,6 +380,7 @@
         this._curSourceNode['buffer'] = buffer;
         this._curSourceNode['loop'] = false;
         this._curSourceNode['connect'](ctx['destination']);
+        this._playbackRate = this._playbackRate ? this._playbackRate : this._curSourceNode['playbackRate'].value;
         this._curSourceNode.onended = onEnded;
         this._curSourceNode.start();
       }
@@ -36708,12 +36710,14 @@
       this._recorderControl = new RecorderControl();
       this._samples = new Float32Array(0);
       this._rawData = new Uint8Array(0);
+      this._playbackRate = null;
       this._blob = null;
       this._onEnded = null;
       this._onAutoEnded = null;
       this._onPlay = null;
       this._onPause = null;
       this._onResume = null;
+      this._onTimeUpdate = null;
       this._onStop = null;
       this._onStartRecord = null;
       this._onCancelRecord = null;
@@ -36723,6 +36727,8 @@
       this._startCtxTime = 0.0;
       this._pauseTime = 0.0;
       this._wbAudioType = '';
+      this._timer = null;
+      this._currentTime = 0;
       /**
        * init 之前先播放一个空音频。
        * 因为有些环境（如iOS）播放首个音频时禁止自动、异步播放，
@@ -36783,6 +36789,27 @@
       value: function isInit() {
         return this._isInit;
       }
+    }, {
+      key: "updateTime",
+      value: function updateTime() {
+        var _this2 = this;
+        clearInterval(this.timer);
+        this.timer = setInterval(function () {
+          if (_this2._currentTime >= _this2.getDuration()) {
+            _this2.resetTimer();
+          }
+          if (_this2._onTimeUpdate) {
+            _this2._onTimeUpdate(_this2._currentTime);
+          }
+          _this2._currentTime++;
+        }, 1000 / (this._playbackRate || 1));
+      }
+    }, {
+      key: "resetTimer",
+      value: function resetTimer() {
+        this._currentTime = 0;
+        clearInterval(this.timer);
+      }
 
       /**
        * 使用浮点数据初始化
@@ -36792,7 +36819,7 @@
     }, {
       key: "initWithArrayBuffer",
       value: function initWithArrayBuffer(array, audioType) {
-        var _this2 = this;
+        var _this3 = this;
         this._wbAudioType = audioType;
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
@@ -36801,49 +36828,49 @@
         return new Promise(function (resolve, reject) {
           if (audioType && audioType === 'audio/amr-wb') {
             var u8Array = new Uint8Array(array);
-            _this2.decodeAMRWBAsync(u8Array).then(function (samples) {
-              _this2._samples = samples;
-              _this2._isInit = true;
-              if (!_this2._samples) {
+            _this3.decodeAMRWBAsync(u8Array).then(function (samples) {
+              _this3._samples = samples;
+              _this3._isInit = true;
+              if (!_this3._samples) {
                 RecorderControl.decodeAudioArrayBufferByContext(array).then(function (data) {
-                  _this2._isInit = true;
-                  return _this2.encodeAMRAsync(data, RecorderControl.getCtxSampleRate());
+                  _this3._isInit = true;
+                  return _this3.encodeAMRAsync(data, RecorderControl.getCtxSampleRate());
                 }).then(function (rawData) {
-                  _this2._rawData = rawData;
-                  _this2._blob = BenzAMRRecorder.rawAMRWBData2Blob(rawData);
-                  return _this2.decodeAMRWBAsync(rawData);
+                  _this3._rawData = rawData;
+                  _this3._blob = BenzAMRRecorder.rawAMRWBData2Blob(rawData);
+                  return _this3.decodeAMRWBAsync(rawData);
                 }).then(function (sample) {
-                  _this2._samples = sample;
+                  _this3._samples = sample;
                   resolve();
                 }).catch(function () {
                   reject(new Error('Failed to decode.'));
                 });
               } else {
-                _this2._rawData = u8Array;
+                _this3._rawData = u8Array;
                 resolve();
               }
             });
           } else {
             var _u8Array = new Uint8Array(array);
-            _this2.decodeAMRAsync(_u8Array).then(function (samples) {
-              _this2._samples = samples;
-              _this2._isInit = true;
-              if (!_this2._samples) {
+            _this3.decodeAMRAsync(_u8Array).then(function (samples) {
+              _this3._samples = samples;
+              _this3._isInit = true;
+              if (!_this3._samples) {
                 RecorderControl.decodeAudioArrayBufferByContext(array).then(function (data) {
-                  _this2._isInit = true;
-                  return _this2.encodeAMRAsync(data, RecorderControl.getCtxSampleRate());
+                  _this3._isInit = true;
+                  return _this3.encodeAMRAsync(data, RecorderControl.getCtxSampleRate());
                 }).then(function (rawData) {
-                  _this2._rawData = rawData;
-                  _this2._blob = BenzAMRRecorder.rawAMRData2Blob(rawData);
-                  return _this2.decodeAMRAsync(rawData);
+                  _this3._rawData = rawData;
+                  _this3._blob = BenzAMRRecorder.rawAMRData2Blob(rawData);
+                  return _this3.decodeAMRAsync(rawData);
                 }).then(function (sample) {
-                  _this2._samples = sample;
+                  _this3._samples = sample;
                   resolve();
                 }).catch(function () {
                   reject(new Error('Failed to decode.'));
                 });
               } else {
-                _this2._rawData = _u8Array;
+                _this3._rawData = _u8Array;
                 resolve();
               }
             });
@@ -36859,7 +36886,7 @@
     }, {
       key: "initWithBlob",
       value: function initWithBlob(blob, audioType) {
-        var _this3 = this;
+        var _this4 = this;
         this._wbAudioType = audioType;
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
@@ -36874,7 +36901,7 @@
           reader.readAsArrayBuffer(blob);
         });
         return p.then(function (data) {
-          return _this3.initWithArrayBuffer(data, audioType);
+          return _this4.initWithArrayBuffer(data, audioType);
         });
       }
 
@@ -36886,7 +36913,7 @@
     }, {
       key: "initWithUrl",
       value: function initWithUrl(url, audioType) {
-        var _this4 = this;
+        var _this5 = this;
         this._wbAudioType = audioType;
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
@@ -36905,7 +36932,7 @@
           xhr.send();
         });
         return p.then(function (array) {
-          return _this4.initWithArrayBuffer(array, audioType);
+          return _this5.initWithArrayBuffer(array, audioType);
         });
       }
 
@@ -36916,14 +36943,14 @@
     }, {
       key: "initWithRecord",
       value: function initWithRecord() {
-        var _this5 = this;
+        var _this6 = this;
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
         }
         this._playEmpty();
         return new Promise(function (resolve, reject) {
-          _this5._recorderControl.initRecorder().then(function () {
-            _this5._isInitRecorder = true;
+          _this6._recorderControl.initRecorder().then(function () {
+            _this6._isInitRecorder = true;
             resolve();
           }).catch(function (e) {
             reject(e);
@@ -36961,6 +36988,9 @@
               break;
             case 'finishRecord':
               this._onFinishRecord = fn;
+              break;
+            case 'timeUpdate':
+              this._onTimeUpdate = fn;
               break;
           }
         }
@@ -37014,6 +37044,16 @@
       key: "onEnded",
       value: function onEnded(fn) {
         this.on('ended', fn);
+      }
+
+      /**
+       * 音频播放进度更新事件
+       * @param {Function} fn
+       */
+    }, {
+      key: "onTimeUpdate",
+      value: function onTimeUpdate(fn) {
+        this.on('timeUpdate', fn);
       }
 
       /**
@@ -37074,6 +37114,7 @@
         this._isPaused = false;
         this._startCtxTime = RecorderControl.getCtxTime() - _startTime;
         this._recorderControl.playPcm(this._samples, this._isInitRecorder ? RecorderControl.getCtxSampleRate() : 8000, this._onEndCallback.bind(this), _startTime, this._wbAudioType);
+        this.updateTime();
       }
 
       /**
@@ -37088,6 +37129,7 @@
         if (this._onStop) {
           this._onStop();
         }
+        this.resetTimer();
       }
 
       /**
@@ -37103,6 +37145,7 @@
         this._isPaused = true;
         this._pauseTime = RecorderControl.getCtxTime() - this._startCtxTime;
         this._recorderControl.stopPcm();
+        clearInterval(this.timer);
         if (this._onPause) {
           this._onPause();
         }
@@ -37124,6 +37167,7 @@
         if (this._onResume) {
           this._onResume();
         }
+        this.updateTime();
       }
 
       /**
@@ -37175,6 +37219,7 @@
       key: "setPosition",
       value: function setPosition(time) {
         var _time = parseFloat(time);
+        this._currentTime = _time;
         if (_time > this.getDuration()) {
           this.stop();
         } else if (this._isPaused) {
@@ -37195,7 +37240,11 @@
     }, {
       key: "setPlaybackRate",
       value: function setPlaybackRate(value) {
+        this._playbackRate = value;
         this._recorderControl.playbackRate(value);
+        if (this._isPlaying) {
+          this.updateTime();
+        }
       }
 
       /**
@@ -37252,20 +37301,20 @@
     }, {
       key: "finishRecord",
       value: function finishRecord() {
-        var _this6 = this;
+        var _this7 = this;
         return new Promise(function (resolve) {
-          _this6._recorderControl.stopRecord();
-          _this6._recorderControl.generateRecordSamples().then(function (samples) {
-            _this6._samples = samples;
-            return _this6.encodeAMRAsync(samples, RecorderControl.getCtxSampleRate());
+          _this7._recorderControl.stopRecord();
+          _this7._recorderControl.generateRecordSamples().then(function (samples) {
+            _this7._samples = samples;
+            return _this7.encodeAMRAsync(samples, RecorderControl.getCtxSampleRate());
           }).then(function (rawData) {
-            _this6._rawData = rawData;
-            _this6._blob = BenzAMRRecorder.rawAMRData2Blob(_this6._rawData);
-            _this6._isInit = true;
-            if (_this6._onFinishRecord) {
-              _this6._onFinishRecord();
+            _this7._rawData = rawData;
+            _this7._blob = BenzAMRRecorder.rawAMRData2Blob(_this7._rawData);
+            _this7._isInit = true;
+            if (_this7._onFinishRecord) {
+              _this7._onFinishRecord();
             }
-            _this6._recorderControl.releaseRecord();
+            _this7._recorderControl.releaseRecord();
             resolve();
           });
         });
@@ -37312,9 +37361,9 @@
     }, {
       key: "encodeAMRAsync",
       value: function encodeAMRAsync(samples, sampleRate) {
-        var _this7 = this;
+        var _this8 = this;
         return new Promise(function (resolve) {
-          _this7._runAMRWorker({
+          _this8._runAMRWorker({
             command: 'encode',
             samples: samples,
             sampleRate: sampleRate
@@ -37324,9 +37373,9 @@
     }, {
       key: "decodeAMRAsync",
       value: function decodeAMRAsync(u8Array) {
-        var _this8 = this;
+        var _this9 = this;
         return new Promise(function (resolve) {
-          _this8._runAMRWorker({
+          _this9._runAMRWorker({
             command: 'decode',
             buffer: u8Array
           }, resolve);
@@ -37337,9 +37386,9 @@
       value:
       // amr-wb 编码
       function encodeAMRWBAsync(samples, sampleRate) {
-        var _this9 = this;
+        var _this10 = this;
         return new Promise(function (resolve) {
-          _this9._runAMRWBWorker({
+          _this10._runAMRWBWorker({
             command: 'encode',
             samples: samples,
             sampleRate: sampleRate
@@ -37349,9 +37398,9 @@
     }, {
       key: "decodeAMRWBAsync",
       value: function decodeAMRWBAsync(u8Array) {
-        var _this10 = this;
+        var _this11 = this;
         return new Promise(function (resolve) {
-          _this10._runAMRWBWorker({
+          _this11._runAMRWBWorker({
             command: 'decode',
             buffer: u8Array
           }, resolve);
