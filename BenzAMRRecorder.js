@@ -36748,10 +36748,12 @@
           if (_this._onAutoEnded) {
             _this._onAutoEnded();
           }
+          _this.resetTimer();
         }
         if (!_this._isPaused) {
           if (_this._onEnded) {
             _this._onEnded();
+            _this.resetTimer();
           }
         }
       };
@@ -36795,13 +36797,13 @@
         var _this2 = this;
         clearInterval(this.timer);
         this.timer = setInterval(function () {
+          _this2._currentTime++;
           if (_this2._currentTime >= _this2.getDuration()) {
             _this2.resetTimer();
           }
           if (_this2._onTimeUpdate) {
             _this2._onTimeUpdate(_this2._currentTime);
           }
-          _this2._currentTime++;
         }, 1000 / (this._playbackRate || 1));
       }
     }, {

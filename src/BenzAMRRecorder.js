@@ -86,6 +86,7 @@ export default class BenzAMRRecorder {
     updateTime() {
         clearInterval(this.timer);
         this.timer = setInterval(() => {
+            this._currentTime++
             if (this._currentTime >= this.getDuration()) {
                 this.resetTimer();
 
@@ -93,7 +94,6 @@ export default class BenzAMRRecorder {
             if (this._onTimeUpdate) {
                 this._onTimeUpdate(this._currentTime)
             }
-            this._currentTime++
 
         }, 1000 / (this._playbackRate || 1));
     }
@@ -374,14 +374,17 @@ export default class BenzAMRRecorder {
             this._isPlaying = false;
             if (this._onStop) {
                 this._onStop();
+                this.resetTimer();
             }
             if (this._onAutoEnded) {
                 this._onAutoEnded();
+                this.resetTimer();
             }
         }
         if (!this._isPaused) {
             if (this._onEnded) {
                 this._onEnded();
+                this.resetTimer();
             }
         }
     };
